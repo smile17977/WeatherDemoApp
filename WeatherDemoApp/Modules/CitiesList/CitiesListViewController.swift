@@ -7,45 +7,140 @@
 
 import UIKit
 
+protocol CitiesListViewControllerProtocol {
+    func moveToWeatherDetails(weather: [String : Weather])
+    func removeRow(at indexPath: IndexPath)
+    func checkSearchBarIsEmpty() -> Bool
+    func checkSearchControllerIsActive() -> Bool
+    func reloadData()
+    func showAddNewCityAlert(title: String,
+                   placeholder: String,
+                   with completion: @escaping (String) -> Void)
+    func showNotFoundCityAlert(with title: String,
+                               and message: String)
+}
+
 class CitiesListViewController: UIViewController {
 
-    @IBOutlet var citiesTableView: UITableView!
+    // MARK: IB Outlets
+    @IBOutlet weak var citiesTableView: UITableView!
+
+    // MARK: Properties
+    private var presenter: CitiesListPresenterProtocol!
+    private let searchController = UISearchController(searchResultsController: nil)
     
-    var namesCities = ["Москва", "Санкт-Петербург", "Ейск", "Воронеж", "Краснодар"]
-    var weathers: [[String : Weather]]?
-    
+    // MARK: Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        for city in namesCities {
-            let nameOfCity = city
-            print("NAME OF CITY \(nameOfCity)")
-            LocationManager.shared.getCoordinateFrom(city: city) { (coordinate, error) in
-                guard let coordinate = coordinate else { return }
-                let latitude = coordinate.latitude
-                let longitude = coordinate.longitude
-                
-                NetworkManager.shared.fetchWeatherData(latitude: latitude,
-                                                       longitude: longitude) { (weather) in
-                    self.weathers?.append([nameOfCity:weather])
-                }
-            }
-        }
-        /*
-        LocationManager.shared.getCoordinateFrom(city: "Уфа") { (coordinate, error) in
-            print(coordinate)
-            
-            guard let coordinate = coordinate else { return }
-            let latitude = coordinate.latitude
-            let longitude = coordinate.longitude
-            
-            NetworkManager.shared.fetchWeatherData(latitude: latitude,
-                                                   longitude: longitude) { (weather) in
-                
-            }
-        }
-        */
-        
+        setupTableView()
+        setupSearchController()
+        setupView()
+        presenter = CitiesListPresenter.init(view: self)
+        presenter?.getCitiesWeather()
+    }
+    
+    // MARK: UI
+    private func setupTableView() {
+        citiesTableView.backgroundColor = .white
+        citiesTableView.delegate = self
+        citiesTableView.dataSource = self
+        citiesTableView.register(UINib(nibName: "CityTableViewCell",
+                                       bundle: nil),
+                                 forCellReuseIdentifier: "CityTableViewCell")
+    }
+    
+    private func setupSearchController() {
+        searchController.searchResultsUpdater = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.searchBar.placeholder = "Введите название города"
+        navigationItem.searchController = searchController
+        definesPresentationContext = true
+    }
+    
+    private func setupView() {
+        navigationController?.navigationBar.prefersLargeTitles = true
+        title = "Погода"
+        view.backgroundColor = .white
+    }
+
+    // MARK: IB Actions
+    @IBAction func buttonPressed(_ sender: Any) {
+        presenter.addNewCityButtonPressed()
     }
 }
 
+// MARK: UITableViewDelegate, UITableViewDataSource
+extension CitiesListViewController: UITableViewDelegate, UITableViewDataSource {
+    
+    func tableView(_ tableView: UITableView,
+                   numberOfRowsInSection section: Int) -> Int {
+        presenter.getCitiesCount()
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = citiesTableView.dequeueReusableCell(withIdentifier: "CityTableViewCell") as! CityTableViewCell
+        presenter.configure(cell: cell, indexPath: indexPath)
+        
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        
+        let deleteAction = UIContextualAction(style: .destructive,
+                                              title: " Стереть") { (_, _, completion) in
+            self.presenter.removeEditingCity(at: indexPath)
+        }
+        
+        return UISwipeActionsConfiguration(actions: [deleteAction])
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   didSelectRowAt indexPath: IndexPath) {
+        
+        presenter.selectedCellPressed(at: indexPath)
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
+}
+
+// MARK: CitiesListViewControllerProtocol
+extension CitiesListViewController: CitiesListViewControllerProtocol {
+    
+    func checkSearchControllerIsActive() -> Bool {
+        return searchController.isActive
+    }
+    
+    func checkSearchBarIsEmpty() -> Bool {
+        guard let text = searchController.searchBar.text else { return false }
+        return text.isEmpty
+    }
+    
+    func removeRow(at indexPath: IndexPath) {
+        citiesTableView.deleteRows(at: [indexPath], with: .automatic)
+    }
+    
+    func moveToWeatherDetails(weather: [String : Weather]) {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        
+        let viewController = storyboard.instantiateViewController(identifier: "WeatherDetailsViewController") as! WeatherDetailsViewController
+        viewController.presenter = WeatherDetailsPresenter.init(view: viewController,
+                                                                weather: weather)
+        navigationController?.pushViewController(viewController, animated: true)
+    }
+    
+    func reloadData() {
+        DispatchQueue.main.async {
+            self.citiesTableView.reloadData()
+        }
+    }
+}
+
+// MARK: UISearchResultsUpdating
+extension CitiesListViewController: UISearchResultsUpdating {
+    
+    func updateSearchResults(for searchController: UISearchController) {
+        presenter.filterCitiesForSearchCity(city: searchController.searchBar.text!)
+    }
+}
