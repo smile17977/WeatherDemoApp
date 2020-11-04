@@ -10,7 +10,7 @@ import Foundation
 struct Weather: Equatable {
     
     var temperature: Int = 0
-    var conditionCode: String = ""
+    var conditionCode: String = "nul"
     var url: String = "Загрузка"
     var condition: String = "Загрузка"
     var presureMm: Int = 0
@@ -44,7 +44,7 @@ struct Weather: Equatable {
         case "thunderstorm" :           return "Гроза"
         case "thunderstorm-with-rain" : return "Дождь с грозой"
         case "thunderstorm-with-hail" : return "Гроза с градом"
-        default :                       return "Loading"
+        default :                       return "Загрузка"
         }
     }
     

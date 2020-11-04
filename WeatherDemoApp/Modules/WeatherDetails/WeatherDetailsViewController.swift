@@ -12,7 +12,7 @@ protocol WeatherDetailsViewControllerProtocol {
     func display(cityName: String)
     func display(temp: Int)
     func display(conditionName: String)
-    func getImage(url: URL)
+    func getImage(conditionCode: String)
     func display(minTemp: Int)
     func display(maxTemp: Int)
     func display(windSpeed: Double)
@@ -41,6 +41,9 @@ class WeatherDetailsViewController: UIViewController {
     @IBOutlet var sunriseLabel: UILabel!
     @IBOutlet var sunsetLabel: UILabel!
     
+    @IBOutlet var tempStackView: UIStackView!
+    @IBOutlet var detailsStackView: UIStackView!
+    
     // MARK: Properties
     var presenter: WeatherDetailsPresenterProtocol!
     
@@ -56,6 +59,12 @@ class WeatherDetailsViewController: UIViewController {
     private func setupView() {
         view.backgroundColor = .white
         title = "Подробно"
+        let color = UIColor(red: 235/255,
+                            green: 235/255,
+                            blue: 235/255,
+                            alpha: 1)
+        tempStackView.addBackground(color: color)
+        detailsStackView.addBackground(color: color)
     }
     
     private func setupLabels() {
@@ -75,6 +84,7 @@ class WeatherDetailsViewController: UIViewController {
 
 // MARK: WeatherDetailsViewControllerProtocol
 extension WeatherDetailsViewController: WeatherDetailsViewControllerProtocol {
+    
     func display(cityName: String) {
         self.cityNameLabel.text = cityName
     }
@@ -87,11 +97,13 @@ extension WeatherDetailsViewController: WeatherDetailsViewControllerProtocol {
         self.conditionNameLabel.text = conditionName
     }
     
-    func getImage(url: URL) {
-        let weatherImage = UIView(SVGURL: url) {(image) in
-            image.resizeToFit(self.conditionImage.bounds)
+    func getImage(conditionCode: String) {
+        presenter.fetchImage(conditionCode: conditionCode) { (data) in
+            let weatherImage = UIView(SVGData: data) { (image) in
+                image.resizeToFit(self.conditionImage.frame)
+            }
+            self.conditionImage.addSubview(weatherImage)
         }
-        conditionImage.addSubview(weatherImage)
     }
     
     func display(minTemp: Int) {

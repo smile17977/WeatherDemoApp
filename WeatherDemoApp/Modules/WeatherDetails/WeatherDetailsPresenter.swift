@@ -8,8 +8,11 @@
 import Foundation
 
 protocol WeatherDetailsPresenterProtocol {
-    init(view: WeatherDetailsViewControllerProtocol, weather: [String : Weather])
+    init(view: WeatherDetailsViewControllerProtocol,
+         weather: [String : Weather])
     func updateInterface()
+    func fetchImage(conditionCode: String,
+                    completion: @escaping (Data) -> Void)
 }
 
 class WeatherDetailsPresenter: WeatherDetailsPresenterProtocol {
@@ -17,7 +20,8 @@ class WeatherDetailsPresenter: WeatherDetailsPresenterProtocol {
     let view: WeatherDetailsViewControllerProtocol
     let currentWeather: [String : Weather]
     
-    required init(view: WeatherDetailsViewControllerProtocol, weather: [String : Weather]) {
+    required init(view: WeatherDetailsViewControllerProtocol,
+                  weather: [String : Weather]) {
         self.view = view
         self.currentWeather = weather
     }
@@ -37,8 +41,13 @@ class WeatherDetailsPresenter: WeatherDetailsPresenterProtocol {
         view.display(humidity: weather.humidity)
         view.display(sunrise: weather.sunrise)
         view.display(sunset: weather.sunset)
-        
-        guard let url = URL(string: "\(Requests.baseImageUrl + weather.conditionCode).svg") else { return }
-        view.getImage(url: url)
+        view.getImage(conditionCode: weather.conditionCode)
+    }
+    
+    func fetchImage(conditionCode: String,
+                    completion: @escaping (Data) -> Void) {
+        ImageManager.shared.fetchImage(conditionCode: conditionCode) { (data) in
+            completion(data)
+        }
     }
 }

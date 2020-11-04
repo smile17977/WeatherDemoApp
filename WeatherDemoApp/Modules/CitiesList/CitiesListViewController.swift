@@ -18,6 +18,7 @@ protocol CitiesListViewControllerProtocol {
                    with completion: @escaping (String) -> Void)
     func showNotFoundCityAlert(with title: String,
                                and message: String)
+    func insertCityAtRow(row: Int)
 }
 
 class CitiesListViewController: UIViewController {
@@ -68,10 +69,22 @@ class CitiesListViewController: UIViewController {
     @IBAction func buttonPressed(_ sender: Any) {
         presenter.addNewCityButtonPressed()
     }
+    @IBAction func editButtonPressed(_ sender: Any) {
+        if citiesTableView.isEditing {
+            citiesTableView.isEditing = false
+        } else {
+            citiesTableView.isEditing = true
+        }
+    }
 }
 
 // MARK: UITableViewDelegate, UITableViewDataSource
 extension CitiesListViewController: UITableViewDelegate, UITableViewDataSource {
+    
+    func insertCityAtRow(row: Int) {
+        let indexPath = IndexPath(row: row, section: 0)
+        citiesTableView.insertRows(at: [indexPath], with: .automatic)
+    }
     
     func tableView(_ tableView: UITableView,
                    numberOfRowsInSection section: Int) -> Int {
@@ -87,21 +100,38 @@ extension CitiesListViewController: UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView,
-                   trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        
-        let deleteAction = UIContextualAction(style: .destructive,
-                                              title: " Стереть") { (_, _, completion) in
-            self.presenter.removeEditingCity(at: indexPath)
-        }
-        
-        return UISwipeActionsConfiguration(actions: [deleteAction])
+                   didSelectRowAt indexPath: IndexPath) {
+        presenter.selectedCellPressed(at: indexPath)
+        tableView.deselectRow(at: indexPath, animated: true)
     }
     
     func tableView(_ tableView: UITableView,
-                   didSelectRowAt indexPath: IndexPath) {
-        
-        presenter.selectedCellPressed(at: indexPath)
-        tableView.deselectRow(at: indexPath, animated: true)
+                   commit editingStyle: UITableViewCell.EditingStyle,
+                   forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            presenter.removeEditingCity(at: indexPath)
+        }
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   moveRowAt sourceIndexPath: IndexPath,
+                   to destinationIndexPath: IndexPath) {
+        presenter.moveCurrentCity(sourceIndexPath: sourceIndexPath,
+                                  destinationIndexPath: destinationIndexPath)
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
+        if citiesTableView.isEditing {
+            return .none
+        } else {
+            return .delete
+        }
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   shouldIndentWhileEditingRowAt indexPath: IndexPath) -> Bool {
+        false
     }
 }
 
@@ -124,7 +154,8 @@ extension CitiesListViewController: CitiesListViewControllerProtocol {
     func moveToWeatherDetails(weather: [String : Weather]) {
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         
-        let viewController = storyboard.instantiateViewController(identifier: "WeatherDetailsViewController") as! WeatherDetailsViewController
+        let viewController = storyboard
+            .instantiateViewController(identifier: "WeatherDetailsVC") as! WeatherDetailsViewController
         viewController.presenter = WeatherDetailsPresenter.init(view: viewController,
                                                                 weather: weather)
         navigationController?.pushViewController(viewController, animated: true)

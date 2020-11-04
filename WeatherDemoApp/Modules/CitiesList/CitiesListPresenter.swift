@@ -18,6 +18,7 @@ protocol CitiesListPresenterProtocol {
     func removeEditingCity(at indexPath: IndexPath)
     func selectedCellPressed(at indexPath: IndexPath)
     func filterCitiesForSearchCity(city: String)
+    func moveCurrentCity(sourceIndexPath: IndexPath, destinationIndexPath: IndexPath)
 }
 
 class CitiesListPresenter: CitiesListPresenterProtocol {
@@ -26,7 +27,12 @@ class CitiesListPresenter: CitiesListPresenterProtocol {
                                   ["Уфа" : Weather()],
                                   ["Ейск" : Weather()],
                                   ["Воронеж" : Weather()],
-                                  ["Краснодар" : Weather()]]
+                                  ["Тюмень" : Weather()],
+                                  ["Краснодар" : Weather()],
+                                  ["Казань" : Weather()],
+                                  ["Ярославль" : Weather()],
+                                  ["Выборг" : Weather()],
+                                  ["Норильск" : Weather()]]
     
     private var filteredCitiesWeathers = [[String : Weather]]()
     private var isFiltering: Bool {
@@ -89,17 +95,25 @@ class CitiesListPresenter: CitiesListPresenterProtocol {
             weatherInCity = citiesWeathers[indexPath.row]
             guard let city = weatherInCity.first?.key else { return }
             guard let weather = weatherInCity.first?.value else { return }
+            print("ICON \(weather.conditionCode) CITY \(city)")
             cell.setupCell(city: city, weather: weather)
         }
     }
     
     // MARK: Add New City
     func addNewCityButtonPressed() {
+        self.view.reloadData()
         view.showAddNewCityAlert(title: "Добавление города",
                        placeholder: "Введите название города") { (city) in
-            let newCity = city
-            self.citiesWeathers.append([city : Weather()])
-            self.getCityAndWeather(city: newCity, index: self.citiesWeathers.count - 1)
+            if city != "" {
+                let newCity = city
+                self.citiesWeathers.append([city : Weather()])
+                self.getCityAndWeather(city: newCity, index: self.citiesWeathers.count - 1)
+                self.view.insertCityAtRow(row: self.citiesWeathers.count - 1)
+            } else {
+                self.view.showNotFoundCityAlert(with: "Ошибка!",
+                                                and: "Введите название города")
+            }
         }
     }
     
@@ -132,5 +146,11 @@ class CitiesListPresenter: CitiesListPresenterProtocol {
             return (weatherInCity.first?.key.lowercased().contains(city.lowercased()))!
         })
         view.reloadData()
+    }
+    
+    // MARK: Move cities
+    func moveCurrentCity(sourceIndexPath: IndexPath, destinationIndexPath: IndexPath) {
+        let currentTrack = citiesWeathers.remove(at: sourceIndexPath.row)
+        citiesWeathers.insert(currentTrack, at: destinationIndexPath.row)
     }
 }

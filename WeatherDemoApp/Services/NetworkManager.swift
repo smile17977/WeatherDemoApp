@@ -26,6 +26,7 @@ class NetworkManager {
         URLSession.shared.dataTask(with: request) { (data, responce, error) in
             guard let data = data else { return }
             if let weather = self.parseJSON(withData: data) {
+                
                 DispatchQueue.main.async {
                     completion(weather)
                 }
@@ -36,10 +37,10 @@ class NetworkManager {
     private func parseJSON(withData data: Data) -> Weather? {
         
         let decoder = JSONDecoder()
-
         do {
             let weatherData = try decoder.decode(WeatherData.self, from: data)
             let weather = Weather(weatherData: weatherData)
+            
             return weather
         } catch let error {
             print(error)

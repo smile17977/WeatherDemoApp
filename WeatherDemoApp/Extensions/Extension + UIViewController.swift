@@ -27,6 +27,8 @@ extension UIViewController {
         alert.addAction(saveAction)
         alert.addAction(cancelAction)
         alert.addTextField { (textField) in
+            textField.keyboardType = .default
+            textField.textContentType = .addressCity
             textField.placeholder = placeholder
         }
         present(alert, animated: true)
